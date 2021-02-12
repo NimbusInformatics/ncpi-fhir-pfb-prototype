@@ -5,6 +5,8 @@
 This is a simple Docker-based environment for developing a FHIR->PFB
 service.
 
+See the Technical Guidelines [doc](https://docs.google.com/document/d/1lHiIDjJDJih131-Q7mVu7zlInfDKs8_a-71pwJ68sfs/edit#) from NCPI, we'll do design work there.
+
 ## Origin
 
 The Docker compose configuration and coding environment is
