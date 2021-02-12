@@ -6,7 +6,7 @@ import json
 import urllib3
 import subprocess
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
-    
+
 fhir_server = sys.argv[1]
 token = sys.argv[2]
 condition = sys.argv[3]
@@ -15,12 +15,16 @@ headers = {"Authorization": "Bearer " + token}
 
 def get_response_json_object(url):
 	r = requests.get(url, headers=headers, verify=False)
+	#print("URL: "+url)
+	#print("RESPONSE: "+str(r.json()))
 	return r.json()
 
 resource_types=[]
 patient_uris = []
 count = 0;
 json_obj = get_response_json_object(fhir_server + '/Condition?_count=25&code:text=' + condition)
+#print(json_obj)
+#exit()
 if ('entry' in json_obj):
 	for entry in json_obj['entry']:
 		patient_uri = entry['resource']['subject']['reference']
@@ -29,10 +33,12 @@ if ('entry' in json_obj):
 
 f = open("input_json/submitted_aligned_reads.json", "w")
 f.write('[\n')
-count=0		
+count=0
 for patient_uri in patient_uris:
 		json_obj = get_response_json_object(fhir_server + '/' + patient_uri)
-		uuid = patient_uri.replace("Patient/", "")	
+		print(json_obj)
+		break
+		uuid = patient_uri.replace("Patient/", "")
 		count = count + 1
 		f.write('{\n')
 		f.write('   "id" : "' + uuid + '",\n')
@@ -65,18 +71,17 @@ for patient_uri in patient_uris:
 			if ('postalCode' in json_obj['address'][0]):
 				f.write('   "postal_code" : "' + json_obj['address'][0]['postalCode'] + '",\n')
 			else:
-				f.write('   "postal_code" : "' + '02130' + '",\n')			
+				f.write('   "postal_code" : "' + '02130' + '",\n')
 		f.write('   "experimental_strategy" : "Whole Genome Sequencing",\n')
 		f.write('   "analysis_type" : "Aligned Sequence Read"\n')
 		if (count == len(patient_uris)):
 			f.write('}\n')
 		else:
 			f.write('},\n')
-		
+
 f.write(']\n')
 f.close()
 
 subprocess.check_call([
 	'pfb', 'from', '-o', 'minimal_data.avro', 'json', '-s', 'minimal_schema.avro', '--program', 'DEV', '--project', 'test', 'input_json/'
 ])
-

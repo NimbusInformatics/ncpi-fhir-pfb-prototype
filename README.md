@@ -55,7 +55,7 @@ scripts
 $> docker exec -it `docker ps | grep ncpi-fhir-pfb-prototype_py-dev_1 | awk '{print $1}'` /bin/bash
 ```
 
-## Setup Google Cloud SDK
+## Setup Google Cloud SDK Using Service Account
 
 Once you've logged into the Docker container that you'll use as your dev environment
 you need to run:
@@ -80,6 +80,21 @@ Created service account [boconnor-service-account-1].
 %> gcloud iam service-accounts keys create ~/.keys/boconnor-service-account-1.json --iam-account=boconnor-service-account-1@my-project.iam.gserviceaccount.com
 ```
 
+You can see the [google cloud docs](https://cloud.google.com/docs/authentication/production)
+for more information on this process.
+
+You need to add that service account to the permissions on your FHIR server.
+
+## Setup Google Cloud SDK without Service Account
+
+I just did the following:
+
+```
+%> gcloud auth application-default login
+```
+
+And that wrote a file with my credentials: `/root/.config/gcloud/application_default_credentials.json`
+
 ## Organization
 
 I've reorganized the services into the `services` directory and the
@@ -93,7 +108,7 @@ below.  But for now we're working on a FHIR->PFB script.  It's located in
 Make sure you replace the FHIR server URL with a valid server:
 
 ```
-python3 fhir_pfb_export.py https://healthcare.googleapis.com/v1/projects/nimbus-fhir-test/locations/us-west2/datasets/nimbus-fhir-dataset/fhirStores/nimbus-fhir-store/fhir  $(gcloud auth application-default print-access-token) covid
+%> python3 fhir_pfb_export.py https://healthcare.googleapis.com/v1/projects/nimbus-fhir-test/locations/us-west2/datasets/nimbus-fhir-dataset/fhirStores/nimbus-fhir-store/fhir  $(gcloud auth application-default print-access-token) covid
 ```
 
 ## Basic Python Script
