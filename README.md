@@ -3,9 +3,19 @@
 ## About
 
 This is a simple Docker-based environment for developing a FHIR->PFB
-service.
+service. The idea is to have a webservice that can act as a proxy
+for a given FHIR server.  Searches can go through this proxy services
+and the FHIR server's response will be aggregated and converted to
+PFB for use in workspace environments that understand PFB, such as
+[Terra](https://app.terra.bio).  
 
-See the Technical Guidelines [doc](https://docs.google.com/document/d/1lHiIDjJDJih131-Q7mVu7zlInfDKs8_a-71pwJ68sfs/edit#) from NCPI, we'll do design work there.
+For now we have a standalone Python script that will connect with a
+FHIR server (namely the FHIR server on Google that Nimbus is using to
+test load synthetic COVID data) and do a conversion to a PFB.
+
+## TODO Items
+
+See the Technical Guidelines [doc](https://docs.google.com/document/d/1lHiIDjJDJih131-Q7mVu7zlInfDKs8_a-71pwJ68sfs/edit#) from NCPI, we'll do design work there and link to GitHub issues where it makes sense.
 
 ## Origin
 
@@ -18,7 +28,7 @@ _The blog link :_
 
 [https://blog.atulr.com/docker-local-environment/](https://blog.atulr.com/docker-local-environment/)
 
-## Running
+## Running the Docker Container as a Dev Environment
 
 To run the example:
 
@@ -35,15 +45,10 @@ Once you launch with `docker-compose up` you can login in to the Python service
 container using:
 
 ```
-# list out the running containers
-$> docker ps
-CONTAINER ID   IMAGE                            COMMAND                  CREATED          STATUS          PORTS                    NAMES
-d15c91da83ab   ncpi-fhir-pfb-prototype_py-dev   "sh -c 'pip install …"   25 seconds ago   Up 24 seconds   0.0.0.0:9000->9000/tcp   ncpi-fhir-pfb-prototype_py-dev_1
+# connect from your host machine
+$> ./connect.sh
 
-# connect to this running container
-$> docker exec -it d15c91da83ab /bin/bash
-
-# now within the container I'm running as root and in the ~/py1 directory
+now within the container I'm running as root and in the ~/py1 directory
 # which is the directory containing the flask app
 root@02d2b8fce3af:~/py1# whoami
 root
@@ -52,12 +57,51 @@ root
 root@02d2b8fce3af:~# cd ~/py-dev/
 root@02d2b8fce3af:~/py-dev# ls
 scripts
-
-# a shortcut to connecting
-$> docker exec -it `docker ps | grep ncpi-fhir-pfb-prototype_py-dev_1 | awk '{print $1}'` /bin/bash
 ```
 
-## Setup Google Cloud SDK Using Service Account
+## Code Organization
+
+I've reorganized the services into the `services` directory and the
+`working` directory contains the scripts and is mounted and shared across the docker containers when run.
+
+## FHIR -> PFB Python Script
+
+Eventually this will be made into a service running on the sample Python server
+below.  But for now we're working on a FHIR->PFB script.  It's located in
+`working/scripts`.  You can run it with the following command _from within the python dev environment you connected to above_.  
+Make sure you replace the FHIR server URL with a valid server:
+
+```
+%> python3 fhir_pfb_export.py https://healthcare.googleapis.com/v1/projects/nimbus-fhir-test/locations/us-west2/datasets/nimbus-fhir-dataset/fhirStores/nimbus-fhir-store/fhir  $(gcloud auth application-default print-access-token) covid
+```
+
+## Python Version
+
+See the [official python images](https://hub.docker.com/_/python) on DockerHub
+as well as the [releases of Debian](https://wiki.debian.org/DebianReleases).  I'm
+using Debian Buster and Python 3 as the basis for the Python environment that gets
+launched:
+
+    python:3-buster
+
+It's probably a good idea to use a specific version number of Python when
+writing real scripts/services.
+
+## Basic Python Server
+
+The flask server is running on `http://localhost:9000` and just returns "Hello from py1"
+
+This will eventually be the place where we can prototype the FHIR to PFB proxy
+service.
+
+## Working with a Google FHIR Server
+
+So far our prototyping has been on the Google FHIR server.  To use this server
+you need to 1) setup/login to your service account in the Docker container
+and 2) give that service account (or your primary account) access to the FHIR
+server running on Google.
+
+### Setup Google Cloud SDK Using Service Account
 
 Once you've logged into the Docker container that you'll use as your dev environment
 you need to run:
@@ -87,7 +131,7 @@ for more information on this process.
 
 You need to add that service account to the permissions on your FHIR server.
 
-## Setup Google Cloud SDK without Service Account
+### Setup Google Cloud SDK without Service Account
 
 I just did the following:
 
@@ -96,41 +140,3 @@ I just did the following:
 ```
 
 And that wrote a file with my credentials: `/root/.config/gcloud/application_default_credentials.json`
-
-## Organization
-
-I've reorganized the services into the `services` directory and the
-`working` directory contains the scripts and is mounted and shared across the docker containers when run.
-
-## FHIR -> PFB Python Script
-
-Eventually this will be made into a service running on the sample Python server
-below.  But for now we're working on a FHIR->PFB script.  It's located in
-`working/scripts`.  You can run it with the following command _from within the python dev environment you connected to above_.  
-Make sure you replace the FHIR server URL with a valid server:
-
-```
-%> python3 fhir_pfb_export.py https://healthcare.googleapis.com/v1/projects/nimbus-fhir-test/locations/us-west2/datasets/nimbus-fhir-dataset/fhirStores/nimbus-fhir-store/fhir  $(gcloud auth application-default print-access-token) covid
-```
-
-## Basic Python Script
-
-I have a basic script located in `working/scripts/basic_python_script/process.py`
-that shows how to use argparse and json, items that I routinely need to use in
-simple scripts.
-
-## Python Version
-
-See the [official python images](https://hub.docker.com/_/python) on DockerHub
-as well as the [releases of Debian](https://wiki.debian.org/DebianReleases).  I'm
-using Debian Buster and Python 3 as the basis for the Python environment that gets
-launched:
-
-    python:3-buster
-
-It's probably a good idea to use a specific version number of Python when
-writing real scripts/services.
-
-## Basic Python Server
-
-The flask server is running on `http://localhost:9000` and just returns "Hello from py1"
