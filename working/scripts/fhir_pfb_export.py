@@ -36,8 +36,8 @@ f.write('[\n')
 count=0
 for patient_uri in patient_uris:
 		json_obj = get_response_json_object(fhir_server + '/' + patient_uri)
-		print(json_obj)
-		break
+		#print(json_obj)
+		#break
 		uuid = patient_uri.replace("Patient/", "")
 		count = count + 1
 		f.write('{\n')
