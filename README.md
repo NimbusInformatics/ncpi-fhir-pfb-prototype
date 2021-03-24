@@ -140,3 +140,7 @@ I just did the following:
 ```
 
 And that wrote a file with my credentials: `/root/.config/gcloud/application_default_credentials.json`
+
+### Setup Access with the NCPI FHIR Server
+
+Here are specific instructions for accessing the [NCPI FHIR Server](https://github.com/ncpi-fhir/ncpi-api-fhir-service).
