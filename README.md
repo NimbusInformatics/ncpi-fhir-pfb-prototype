@@ -71,8 +71,18 @@ below.  But for now we're working on a FHIR->PFB script.  It's located in
 `working/scripts`.  You can run it with the following command _from within the python dev environment you connected to above_.  
 Make sure you replace the FHIR server URL with a valid server:
 
+_See the instructions below for logging in and setting up your Google cloud credentials_.
+
 ```
 %> python3 fhir_pfb_export.py https://healthcare.googleapis.com/v1/projects/nimbus-fhir-test/locations/us-west2/datasets/nimbus-fhir-dataset/fhirStores/nimbus-fhir-store/fhir  $(gcloud auth application-default print-access-token) covid
+```
+
+## Make a new PFB Schema
+
+You do this if you need to modify the schema of the PFB.
+
+```
+%> pfb from -o minimal_schema.avro dict minimal_file.json
 ```
 
 ## Python Version
@@ -140,3 +150,12 @@ I just did the following:
 ```
 
 And that wrote a file with my credentials: `/root/.config/gcloud/application_default_credentials.json`
+
+## Loading a PFB Into Terra
+
+Now that you've generated a PFB how do you use it in the Terra environment?
+
+You need to:
+
+1) host the PFB file on a google bucket
+2) load the PFB in Terra using https://app.terra.bio/#import-data?format=PFB&url=https://storage.googleapis.com/dsp-pi-boconnor-dev/20201105_pfb_testing/minimal_data.pfb

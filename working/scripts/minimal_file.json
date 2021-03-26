@@ -23,7 +23,7 @@
         "enum" : [
            "file_size",
            "file_format",
-           "md5sum"
+           "file_md5sum"
         ],
         "term" : {
            "$ref" : "_terms.yaml#/data_file_error_type"
@@ -43,11 +43,20 @@
         "file_state" : {
            "$ref" : "#/file_state"
         },
-        "md5sum" : {
-           "$ref" : "#/md5sum"
+        "file_md5sum" : {
+           "$ref" : "#/file_md5sum"
+        },
+        "file_type" : {
+           "$ref" : "#/file_type"
+        },
+        "file_format" : {
+           "$ref" : "#/file_format"
         },
         "object_id" : {
            "$ref" : "#/object_id"
+        },
+        "ga4gh_drs_uri" : {
+           "$ref" : "#/ga4gh_drs_uri"
         }
      },
      "datetime" : {
@@ -106,9 +115,9 @@
         },
         "type" : "string"
      },
-     "birth_date" : {
+     "birthDate" : {
         "term" : {
-          "$ref" : "_terms.yaml#/birth_date"
+          "$ref" : "_terms.yaml#/birthDate"
         },
         "type" : "string"
      },
@@ -185,10 +194,16 @@
         "type" : "object"
      },
      "id" : "_definitions",
-     "md5sum" : {
+     "file_md5sum" : {
         "pattern" : "^[a-f0-9]{32}$",
         "term" : {
-           "$ref" : "_terms.yaml#/md5sum"
+           "$ref" : "_terms.yaml#/file_md5sum"
+        },
+        "type" : "string"
+     },
+     "file_type" : {
+        "term" : {
+           "$ref" : "_terms.yaml#/file_type"
         },
         "type" : "string"
      },
@@ -341,52 +356,46 @@
         "id" : {
            "$ref" : "#/UUID",
            "systemAlias" : "node_id"
-        },
-        "ga4gh_drs_uri" : {
-           "$ref" : "#/ga4gh_drs_uri"
-        },
-        "participant_id" : {
-           "$ref" : "#/participant_id"
-        },
-        "specimen_id" : {
-           "$ref" : "#/specimen_id"
-        },
-        "experimental_strategy" : {
-           "$ref" : "#/experimental_strategy"
-        },
-        "study_registration" : {
-           "$ref" : "#/study_registration"
-        },
-        "study_id" : {
-           "$ref" : "#/study_id"
-        },        
-        "project_id" : {
-           "$ref" : "#/project_id"
-        },
-        "birth_date" : {
-           "$ref" : "#/birth_date"
-        },
-        "analysis_type" : {
-           "$ref" : "#/analysis_type"
-        },        
-         "state_abbrev" : {
-           "$ref" : "#/state_abbrev"
-        },
-         "postal_code" : {
-           "$ref" : "#/postal_code"
-        },
-        "submitter_id" : {
-           "description" : "A project-specific identifier for a node. This property is the calling card/nickname/alias for a unit of submission. It can be used in place of the UUID for identifying or recalling a node.\n",
-           "type" : [
-              "string"
-           ]
-        },
-        "subject_id" : {
-           "$ref" : "#/subject_id"
-        },
-        "type" : {
-           "type" : "string"
         }
+     },
+     "ncpi_pfb_light_properties" : {
+       "$ref" : "#/ubiquitous_properties",
+       "submitter_id" : {
+          "description" : "A project-specific identifier for a node. This property is the calling card/nickname/alias for a unit of submission. It can be used in place of the UUID for identifying or recalling a node.\n",
+          "type" : [
+             "string"
+          ]
+       },
+       "study_registration" : {
+          "$ref" : "#/study_registration"
+       },
+       "study_id" : {
+          "$ref" : "#/study_id"
+       },
+       "participant_id" : {
+          "$ref" : "#/participant_id"
+       },
+       "specimen_id" : {
+          "$ref" : "#/specimen_id"
+       },
+       "experimental_strategy" : {
+          "$ref" : "#/experimental_strategy"
+       }
+     },
+     "patient_properties" : {
+       "$ref" : "#/ncpi_pfb_light_properties",
+       "gender" : {
+         "type" : "string"
+       },
+       "birthDate" : {
+          "$ref" : "#/birthDate"
+       },
+       "state_abbrev" : {
+         "$ref" : "#/state_abbrev"
+       },
+       "postal_code" : {
+         "$ref" : "#/postal_code"
+       }
      },
      "workflow_properties" : {
         "$ref" : "#/ubiquitous_properties",
@@ -449,7 +458,7 @@
     "analysis_type":{
       "description": "Analysis Type.\n"
     },
-    "birth_date":{
+    "birthDate":{
       "description": "Birth Date.\n"
     },
     "state_abbrev":{
@@ -457,7 +466,7 @@
     },
     "postal_code":{
       "description": "Postal Code.\n"
-    },    
+    },
     "file_name" : {
        "description" : "The name (or part of a name) of a file (of any type).\n"
     },
@@ -470,7 +479,10 @@
     "file_format" : {
        "description" : "The file format.\n"
     },
-    "md5sum" : {
+    "file_type" : {
+       "description" : "The file type.\n"
+    },
+    "file_md5sum" : {
        "description" : "The 128-bit hash value expressed as a 32 digit hexadecimal number used as a file's digital fingerprint.\n"
     },
     "project_id" : {
@@ -505,59 +517,31 @@
        "description" : "The sequencing strategy used to generate the data file.\n"
     }
   },
-  "submitted_aligned_reads.yaml" : {
+  "patient.yaml" : {
      "$schema" : "http://json-schema.org/draft-04/schema#",
      "additionalProperties" : false,
      "category" : "data_file",
      "description" : "Data file.\n",
-     "id" : "submitted_aligned_reads",
+     "id" : "patient",
      "links" : [],
      "namespace" : "https://dcp.bionimbus.org/",
      "program" : "*",
      "project" : "*",
      "properties" : {
-        "$ref" : "_definitions.yaml#/data_file_properties",
-        "file_format" : {
-           "enum" : [
-              "BAM",
-              "CRAM"
-           ],
-           "term" : {
-              "$ref" : "_terms.yaml#/data_format"
-           }
-        }
+       "$ref" : "_definitions.yaml#/patient_properties"
      },
      "required" : [
-        "type",
-        "submitter_id",
-        "file_name",
-        "file_size",
-        "md5sum",
-        "ga4gh_drs_uri",
-        "participant_id",
-        "study_registration",
-        "specimen_id",
-        "experimental_strategy"
+       "id"
      ],
-     "submittable" : true,
+     "submittable" : false,
      "systemProperties" : [
-        "id",
-        "project_id",
-        "datetime",
-        "state",
-        "file_state",
-        "error_type",
-        "subject_id"
+        "id"
      ],
      "title" : "File",
      "type" : "object",
      "uniqueKeys" : [
         [
            "id"
-        ],
-        [
-           "project_id",
-           "submitter_id"
         ]
      ],
      "validators" : null

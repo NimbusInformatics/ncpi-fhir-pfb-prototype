@@ -1,10 +1,16 @@
-# Given a FHIR server and auth token, this script runs a query, iterates through the matching patient results, and generates a PFB for the patients.
+# Given a FHIR server and auth token, this script runs a query, iterates through
+# the matching patient results, and generates a PFB for the patients.
 
 import requests
 import sys
 import json
 import urllib3
 import subprocess
+from flatten_json import flatten
+
+# Globals
+patient_keys = dict()
+
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 fhir_server = sys.argv[1]
@@ -15,73 +21,96 @@ headers = {"Authorization": "Bearer " + token}
 
 def get_response_json_object(url):
 	r = requests.get(url, headers=headers, verify=False)
-	#print("URL: "+url)
-	#print("RESPONSE: "+str(r.json()))
 	return r.json()
 
-resource_types=[]
-patient_uris = []
-count = 0;
-json_obj = get_response_json_object(fhir_server + '/Condition?_count=25&code:text=' + condition)
-#print(json_obj)
-#exit()
-if ('entry' in json_obj):
-	for entry in json_obj['entry']:
-		patient_uri = entry['resource']['subject']['reference']
-		print('Found matching patient:', patient_uri)
-		patient_uris.append(patient_uri)
+def main():
+	resource_types=[]
+	patient_uris = []
+	count = 0;
 
-f = open("input_json/submitted_aligned_reads.json", "w")
-f.write('[\n')
-count=0
-for patient_uri in patient_uris:
+	# Perform a search based on conditions
+	# TODO: we need to make this more generic, remove hard-coded limit
+	json_obj = get_response_json_object(fhir_server + '/Condition?_count=25&code:text=' + condition)
+
+	# Collect all the patient records
+	# eliminate duplicates
+	previous_patients = dict()
+	if ('entry' in json_obj):
+		for entry in json_obj['entry']:
+			patient_uri = entry['resource']['subject']['reference']
+			if patient_uri in previous_patients.keys():
+				continue
+			else:
+				previous_patients[patient_uri] = 1
+				print('Found matching patient:', patient_uri)
+				patient_uris.append(patient_uri)
+
+	f = open("input_json/patient.json", "w")
+	f.write('[\n')
+	count=0
+	for patient_uri in patient_uris:
+		if (count > 0):
+			f.write(',\n')
 		json_obj = get_response_json_object(fhir_server + '/' + patient_uri)
-		#print(json_obj)
-		#break
+		# for more information on the flatten method see https://towardsdatascience.com/flattening-json-objects-in-python-f5343c794b10
+		flat_json = flatten(json_obj, '_')
+		# Adding the keys from the JSON seen for each patient so we can later add
+		# them to the PFB schema.
+		track_patient_keys(flat_json)
+		convert_values_to_strings(flat_json)
+		print(json.dumps(flat_json))
 		uuid = patient_uri.replace("Patient/", "")
+		# making sure we have at least these defined
+		flat_json['submitter_id'] = uuid
+		flat_json['id'] = uuid
+		f.write(json.dumps(flat_json))
+		f.write('\n')
 		count = count + 1
-		f.write('{\n')
-		f.write('   "id" : "' + uuid + '",\n')
-		f.write('   "name" : "submitted_aligned_reads",\n')
-		f.write('   "submitter_id" : "' + uuid + '",\n')
-		f.write('   "datetime" : "2020-11-04T14:32:19.373454+00:00",\n')
-		f.write('   "error_type" : "file_size",\n')
-		f.write('   "file_format" : "BAM",\n')
-		f.write('   "file_name" : "foo.bam",\n')
-		f.write('   "file_size" : 512,\n')
-		f.write('   "file_state" : "registered",\n')
-		f.write('   "md5sum" : "bdf121aadba028d57808101cb4455fa7",\n')
-		f.write('   "object_id" : "dg.4503/' + uuid + '",\n')
-		f.write('   "project_id" : "tutorial-synthetic_data_set_1",\n')
-		f.write('   "state" : "uploading",\n')
-		f.write('   "subject_id" : "p1011554-9",\n')
-		f.write('   "participant_id": "' + uuid + '",\n')
-		f.write('   "ga4gh_drs_uri" : "drs://example.org/dg.4503/' + uuid + '",\n')
-		f.write('   "study_registration" : "example.com/study_registration",\n')
-		f.write('   "study_id" : "aaa1234",\n')
-		f.write('   "specimen_id" : "spec1111",\n')
-#		f.write('   "updated_datetime" : "2020-11-04T14:32:19.373454+00:00",\n')
-		if ('birthDate' in json_obj):
-			f.write('   "birth_date" : "' + json_obj['birthDate'] + '",\n')
-		if ('address' in json_obj):
-			if ('state' in json_obj['address'][0]):
-				f.write('   "state_abbrev" : "' + json_obj['address'][0]['state'] + '",\n')
-			else:
-				f.write('   "state_abbrev" : "' + 'MA' + '",\n')
-			if ('postalCode' in json_obj['address'][0]):
-				f.write('   "postal_code" : "' + json_obj['address'][0]['postalCode'] + '",\n')
-			else:
-				f.write('   "postal_code" : "' + '02130' + '",\n')
-		f.write('   "experimental_strategy" : "Whole Genome Sequencing",\n')
-		f.write('   "analysis_type" : "Aligned Sequence Read"\n')
-		if (count == len(patient_uris)):
-			f.write('}\n')
+	f.write(']\n')
+	f.close()
+
+	#print(json.dumps(patient_keys))
+
+	# update the PFB schema based on fields seen in all patients
+	json_schema = json.load(open('minimal_file.json', 'r'))
+	extend_patient_schema(json_schema)
+	print(json.dumps(json_schema['_definitions.yaml']['workflow_properties']))
+	write_json_schema_to_pfb(json_schema, 'minimal_schema.avro')
+
+	# write out the FHIR patient data as PFB
+	write_fhir_patients_to_pfb()
+
+
+
+# adds patient flatten keys to shared object
+def track_patient_keys(json_obj):
+	for curr_key in json_obj:
+		if curr_key in patient_keys.keys():
+			continue
 		else:
-			f.write('},\n')
+			patient_keys[curr_key] = 1
 
-f.write(']\n')
-f.close()
+def extend_patient_schema(json_schema):
+	for curr_key in patient_keys.keys():
+		json_schema['_definitions.yaml']['patient_properties'][curr_key] = { 'type': 'string'}
+	print(json.dumps(json_schema['_definitions.yaml']['patient_properties']))
 
-subprocess.check_call([
-	'pfb', 'from', '-o', 'minimal_data.avro', 'json', '-s', 'minimal_schema.avro', '--program', 'DEV', '--project', 'test', 'input_json/'
-])
+def write_json_schema_to_pfb(json_schema, output_avro_file):
+	f = open("extended_minimal_file.json", 'w')
+	f.write(json.dumps(json_schema))
+	f.close()
+	subprocess.check_call([
+		'pfb', 'from', '-o', 'minimal_schema.avro', 'dict', 'extended_minimal_file.json'
+	])
+
+def write_fhir_patients_to_pfb():
+	subprocess.check_call([
+		'pfb', 'from', '-o', 'minimal_data.avro', 'json', '-s', 'minimal_schema.avro', '--program', 'DEV', '--project', 'test', 'input_json/'
+	])
+
+def convert_values_to_strings(json_struct):
+	for curr_key in json_struct.keys():
+		json_struct[curr_key] = str(json_struct[curr_key])
+
+if __name__ == '__main__':
+    main()
