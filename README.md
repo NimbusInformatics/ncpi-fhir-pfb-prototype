@@ -159,3 +159,7 @@ You need to:
 
 1) host the PFB file on a google bucket
 2) load the PFB in Terra using https://app.terra.bio/#import-data?format=PFB&url=https://storage.googleapis.com/dsp-pi-boconnor-dev/20201105_pfb_testing/minimal_data.pfb
+
+## Setup Access with the NCPI FHIR Server
+
+Here are specific instructions for accessing the [NCPI FHIR Server](https://github.com/ncpi-fhir/ncpi-api-fhir-service).
