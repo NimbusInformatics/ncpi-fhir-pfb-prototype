@@ -85,17 +85,18 @@ def main():
 		#/Patient/7da367de-ad47-47ad-a0f8-ed3688058d4c
 		json_obj = get_response_json_object(fhir_server + '/DocumentReference/?subject=' + patient_uri)
 		flat_json = flatten(json_obj, '_')
-		track_docref_keys(flat_json)
 		convert_values_to_strings(flat_json)
 		print(json.dumps(json_obj))
 		uuid = flat_json['entry_0_resource_id']
+		patient_uuid = patient_uri.replace("Patient/", "")
 		# making sure we have at least these defined
 		flat_json['submitter_id'] = uuid
-		flat_json['id'] = uuid
 		flat_json['file_name'] = flat_json['entry_0_resource_identifier_0_value']
 		flat_json['object_id'] = uuid
+		flat_json['patient_id'] = patient_uuid
 		flat_json['ga4gh_drs_uri'] = flat_json['entry_0_resource_content_0_attachment_url']
-
+		track_docref_keys(flat_json)
+		flat_json['id'] = uuid
 		f.write(json.dumps(flat_json))
 		f.write('\n')
 		count = count + 1
