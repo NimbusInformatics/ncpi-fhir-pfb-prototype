@@ -10,6 +10,7 @@ from flatten_json import flatten
 
 # Globals
 patient_keys = dict()
+docref_keys = dict()
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
@@ -45,6 +46,7 @@ def main():
 				print('Found matching patient:', patient_uri)
 				patient_uris.append(patient_uri)
 
+	# patients
 	f = open("input_json/patient.json", "w")
 	f.write('[\n')
 	count=0
@@ -52,6 +54,7 @@ def main():
 		if (count > 0):
 			f.write(',\n')
 		json_obj = get_response_json_object(fhir_server + '/' + patient_uri)
+
 		# for more information on the flatten method see https://towardsdatascience.com/flattening-json-objects-in-python-f5343c794b10
 		flat_json = flatten(json_obj, '_')
 		# Adding the keys from the JSON seen for each patient so we can later add
@@ -69,16 +72,47 @@ def main():
 	f.write(']\n')
 	f.close()
 
+	# patient ref docs
+	# TODO: we should iterate over each doc reference individually rather than collapse the whole structure
+	# that will prevent the names from having entry_0... in them...
+	f = open("input_json/document_reference.json", "w")
+	f.write('[\n')
+	count=0
+	for patient_uri in patient_uris:
+		print ("PATIENT URI: "+patient_uri)
+		if (count > 0):
+			f.write(',\n')
+		#/Patient/7da367de-ad47-47ad-a0f8-ed3688058d4c
+		json_obj = get_response_json_object(fhir_server + '/DocumentReference/?subject=' + patient_uri)
+		flat_json = flatten(json_obj, '_')
+		track_docref_keys(flat_json)
+		convert_values_to_strings(flat_json)
+		print(json.dumps(json_obj))
+		uuid = flat_json['entry_0_resource_id']
+		# making sure we have at least these defined
+		flat_json['submitter_id'] = uuid
+		flat_json['id'] = uuid
+		flat_json['file_name'] = flat_json['entry_0_resource_identifier_0_value']
+		flat_json['object_id'] = uuid
+		flat_json['ga4gh_drs_uri'] = flat_json['entry_0_resource_content_0_attachment_url']
+
+		f.write(json.dumps(flat_json))
+		f.write('\n')
+		count = count + 1
+	f.write(']\n')
+	f.close()
+
 	#print(json.dumps(patient_keys))
 
 	# update the PFB schema based on fields seen in all patients
 	json_schema = json.load(open('minimal_file.json', 'r'))
 	extend_patient_schema(json_schema)
-	print(json.dumps(json_schema['_definitions.yaml']['workflow_properties']))
+	extend_docref_schema(json_schema)
 	write_json_schema_to_pfb(json_schema, 'minimal_schema.avro')
 
 	# write out the FHIR patient data as PFB
 	write_fhir_patients_to_pfb()
+
 
 
 
@@ -89,6 +123,19 @@ def track_patient_keys(json_obj):
 			continue
 		else:
 			patient_keys[curr_key] = 1
+
+# adds patient flatten keys to shared object
+def track_docref_keys(json_obj):
+	for curr_key in json_obj:
+		if curr_key in docref_keys.keys():
+			continue
+		else:
+			docref_keys[curr_key] = 1
+
+def extend_docref_schema(json_schema):
+	for curr_key in docref_keys.keys():
+		json_schema['_definitions.yaml']['document_reference_properties'][curr_key] = { 'type': 'string'}
+	print(json.dumps(json_schema['_definitions.yaml']['document_reference_properties']))
 
 def extend_patient_schema(json_schema):
 	for curr_key in patient_keys.keys():

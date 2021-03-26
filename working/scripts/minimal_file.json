@@ -397,6 +397,9 @@
          "$ref" : "#/postal_code"
        }
      },
+     "document_reference_properties" : {
+       "$ref" : "#/data_file_properties"
+     },
      "workflow_properties" : {
         "$ref" : "#/ubiquitous_properties",
         "workflow_end_datetime" : {
@@ -529,6 +532,35 @@
      "project" : "*",
      "properties" : {
        "$ref" : "_definitions.yaml#/patient_properties"
+     },
+     "required" : [
+       "id"
+     ],
+     "submittable" : false,
+     "systemProperties" : [
+        "id"
+     ],
+     "title" : "File",
+     "type" : "object",
+     "uniqueKeys" : [
+        [
+           "id"
+        ]
+     ],
+     "validators" : null
+  },
+  "document_reference.yaml" : {
+     "$schema" : "http://json-schema.org/draft-04/schema#",
+     "additionalProperties" : false,
+     "category" : "data_file",
+     "description" : "Data file.\n",
+     "id" : "document_reference",
+     "links" : [],
+     "namespace" : "https://dcp.bionimbus.org/",
+     "program" : "*",
+     "project" : "*",
+     "properties" : {
+       "$ref" : "_definitions.yaml#/document_reference_properties"
      },
      "required" : [
        "id"
