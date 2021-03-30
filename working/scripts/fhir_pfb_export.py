@@ -17,6 +17,7 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 fhir_server = sys.argv[1]
 token = sys.argv[2]
 condition = sys.argv[3]
+cloud_bucket = sys.argv[4]
 
 headers = {"Authorization": "Bearer " + token}
 
@@ -113,7 +114,7 @@ def main():
 
 	# write out the FHIR patient data as PFB
 	write_fhir_patients_to_pfb()
-
+	upload_pfb_to_google_cloud()
 
 
 
@@ -155,6 +156,14 @@ def write_fhir_patients_to_pfb():
 	subprocess.check_call([
 		'pfb', 'from', '-o', 'minimal_data.avro', 'json', '-s', 'minimal_schema.avro', '--program', 'DEV', '--project', 'test', 'input_json/'
 	])
+
+
+def upload_pfb_to_google_cloud():
+	subprocess.check_call([
+		'gsutil', 'cp','minimal_data.avro', 'gs://' + cloud_bucket
+	])
+	print ("Cloud Copy complete.")
+	print ("To import into Terra, use https://app.terra.bio/#import-data?format=PFB&url=https://storage.googleapis.com/" + cloud_bucket + "/minimal_data.avro")
 
 def convert_values_to_strings(json_struct):
 	for curr_key in json_struct.keys():
