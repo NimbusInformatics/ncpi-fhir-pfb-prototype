@@ -1,6 +1,7 @@
 # Given a FHIR server and auth token, this script runs a query, iterates through
 # the matching patient results, and generates a PFB for the patients.
 
+import argparse
 import requests
 import sys
 import json
@@ -14,26 +15,30 @@ docref_keys = dict()
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
-fhir_server = sys.argv[1]
-token = sys.argv[2]
-condition = sys.argv[3]
-cloud_bucket = sys.argv[4]
-
-headers = {"Authorization": "Bearer " + token}
-
-def get_response_json_object(url):
-	r = requests.get(url, headers=headers, verify=False)
+def get_response_json_object(url, headers, cookies):
+	r = requests.get(url, headers=headers, cookies=cookies, verify=False, allow_redirects=True)
+#	print('status:', r.status_code, 'content-type', r.headers['content-type'], 'url', r.url, 'text', r.text)
 	return r.json()
 
 def main():
+	args = parse_args()
+	fhir_server = args.fhir_server
+	token = args.token
+	query = args.query
+	cloud_bucket = args.gcs_bucket
+
+	cookies = dict()
+	headers = {}
+	if (token is not None and token != ''):
+		headers = {"Authorization": "Bearer " + token}
 	resource_types=[]
 	patient_uris = []
 	count = 0;
 
 	# Perform a search based on conditions
 	# TODO: we need to make this more generic, remove hard-coded limit
-	json_obj = get_response_json_object(fhir_server + '/Condition?_count=25&code:text=' + condition)
-
+#	json_obj = get_response_json_object(fhir_server + '/Condition?_count=25&code:text=' + query, headers)
+	json_obj = get_response_json_object(fhir_server + '/' + query, headers, cookies)
 	# Collect all the patient records
 	# eliminate duplicates
 	previous_patients = dict()
@@ -54,7 +59,7 @@ def main():
 	for patient_uri in patient_uris:
 		if (count > 0):
 			f.write(',\n')
-		json_obj = get_response_json_object(fhir_server + '/' + patient_uri)
+		json_obj = get_response_json_object(fhir_server + '/' + patient_uri, headers, cookies)
 
 		# for more information on the flatten method see https://towardsdatascience.com/flattening-json-objects-in-python-f5343c794b10
 		flat_json = flatten(json_obj, '_')
@@ -84,23 +89,25 @@ def main():
 		if (count > 0):
 			f.write(',\n')
 		#/Patient/7da367de-ad47-47ad-a0f8-ed3688058d4c
-		json_obj = get_response_json_object(fhir_server + '/DocumentReference/?subject=' + patient_uri)
+		json_obj = get_response_json_object(fhir_server + '/DocumentReference/?subject=' + patient_uri, headers, cookies)
 		flat_json = flatten(json_obj, '_')
 		convert_values_to_strings(flat_json)
 		print(json.dumps(json_obj))
-		uuid = flat_json['entry_0_resource_id']
-		patient_uuid = patient_uri.replace("Patient/", "")
-		# making sure we have at least these defined
-		flat_json['submitter_id'] = uuid
-		flat_json['file_name'] = flat_json['entry_0_resource_identifier_0_value']
-		flat_json['object_id'] = uuid
-		flat_json['patient_id'] = patient_uuid
-		flat_json['ga4gh_drs_uri'] = flat_json['entry_0_resource_content_0_attachment_url']
-		track_docref_keys(flat_json)
-		flat_json['id'] = uuid
-		f.write(json.dumps(flat_json))
-		f.write('\n')
-		count = count + 1
+#		print('flat_json:', flat_json)
+		if (flat_json['total'] != "0"):
+			uuid = flat_json['entry_0_resource_id']
+			patient_uuid = patient_uri.replace("Patient/", "")
+			# making sure we have at least these defined
+			flat_json['submitter_id'] = uuid
+			flat_json['file_name'] = flat_json['entry_0_resource_identifier_0_value']
+			flat_json['object_id'] = uuid
+			flat_json['patient_id'] = patient_uuid
+			flat_json['ga4gh_drs_uri'] = flat_json['entry_0_resource_content_0_attachment_url']
+			track_docref_keys(flat_json)
+			flat_json['id'] = uuid
+			f.write(json.dumps(flat_json))
+			f.write('\n')
+			count = count + 1
 	f.write(']\n')
 	f.close()
 
@@ -114,7 +121,7 @@ def main():
 
 	# write out the FHIR patient data as PFB
 	write_fhir_patients_to_pfb()
-	upload_pfb_to_google_cloud()
+	upload_pfb_to_google_cloud(cloud_bucket)
 
 
 
@@ -158,7 +165,7 @@ def write_fhir_patients_to_pfb():
 	])
 
 
-def upload_pfb_to_google_cloud():
+def upload_pfb_to_google_cloud(cloud_bucket):
 	subprocess.check_call([
 		'gsutil', 'cp','minimal_data.avro', 'gs://' + cloud_bucket
 	])
@@ -168,6 +175,18 @@ def upload_pfb_to_google_cloud():
 def convert_values_to_strings(json_struct):
 	for curr_key in json_struct.keys():
 		json_struct[curr_key] = str(json_struct[curr_key])
+
+def parse_args():
+	parser = argparse.ArgumentParser(description='Export PFB from FHIR.')
+	parser.add_argument('--fhir_server', type=str, required=True, help='fhir_server')
+	parser.add_argument('--token', type=str, help='token')
+	parser.add_argument('--query', type=str, required=True, help='query')
+	parser.add_argument('--gcs_bucket', type=str, required=True, help='gcs_bucket')
+	
+	args = parser.parse_args()
+	if (len(sys.argv) == 0):
+		parser.print_help()
+	return args	
 
 if __name__ == '__main__':
     main()
