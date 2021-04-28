@@ -75,14 +75,14 @@ Make sure you replace the FHIR server URL with a valid server:
 _See the instructions below for logging in and setting up your Google cloud credentials_.
 
 ```
-%> python3 fhir_pfb_export.py --fhir_server https://dbgap-api.ncbi.nlm.nih.gov/fhir/x1 --query "Observation?code=triglycerides_1" --gcs_bucket nimbus-pfb-test
+%> python3 fhir_pfb_export.py --fhir_server https://healthcare.googleapis.com/v1/projects/nimbus-fhir-test/locations/us-west2/datasets/nimbus-fhir-dataset/fhirStores/nimbus-fhir-store/fhir  --token $(gcloud auth application-default print-access-token) --query "Condition?_count=25&code:text=covid" --gcs_bucket nimbus-pfb-test
 ```
 
 ### Running on dbGaP FHIR Server
 _The dbGaP FHIR Server is not under access control, so no credentials are needed_.
 
 ```
-%> python3 fhir_pfb_export.py --fhir_server https://healthcare.googleapis.com/v1/projects/nimbus-fhir-test/locations/us-west2/datasets/nimbus-fhir-dataset/fhirStores/nimbus-fhir-store/fhir  --token $(gcloud auth application-default print-access-token) --query "Condition?_count=25&code:text=covid" --gcs_bucket nimbus-pfb-test
+%> python3 fhir_pfb_export.py --fhir_server https://dbgap-api.ncbi.nlm.nih.gov/fhir/x1 --query "Observation?code=triglycerides_1" --gcs_bucket nimbus-pfb-test
 ```
 
 ## Make a new PFB Schema
