@@ -1,0 +1,9 @@
+{  "fhir_server_base_uri":"https://healthcare.googleapis.com/v1/projects/nimbus-fhir-test/locations/us-west2/datasets/nimbus-fhir-dataset/fhirStores/nimbus-fhir-store/fhir",
+   "ids":[
+      "Patient/2cc0bb69-68a8-441e-8c48-006299b21ce1",
+      "Patient/50903d89-d180-448b-a1a7-a589e681b5b7",
+      "Patient/8a4c5099-7dcd-4bac-a875-1ceb079f901f",
+      "Patient/8d6b4d4d-c242-410e-82bc-9b59c6527d3c",
+      "Patient/1b0bf3c1-188e-46eb-8378-ea71d6b0ddee"
+   ]
+}
