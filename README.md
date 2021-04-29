@@ -78,13 +78,6 @@ _See the instructions below for logging in and setting up your Google cloud cred
 %> python3 fhir_pfb_export.py --fhir_server https://healthcare.googleapis.com/v1/projects/nimbus-fhir-test/locations/us-west2/datasets/nimbus-fhir-dataset/fhirStores/nimbus-fhir-store/fhir  --token $(gcloud auth application-default print-access-token) --query "Condition?_count=25&code:text=covid" --gcs_bucket nimbus-pfb-test
 ```
 
-### Running a query on dbGaP FHIR Server
-_The dbGaP FHIR Server is not under access control, so no credentials are needed_.
-
-```
-%> python3 fhir_pfb_export.py --fhir_server https://dbgap-api.ncbi.nlm.nih.gov/fhir/x1 --query "Observation?code=triglycerides_1" --gcs_bucket nimbus-pfb-test
-```
-
 ### Using a list of patient URIs on a Google FHIR Server
 _See the instructions below for logging in and setting up your Google cloud credentials_.
 
@@ -92,6 +85,27 @@ Update the file sample_fhir_ids_input.json and fill in the values for _fhir_serv
 
 ```
 %> python3 fhir_pfb_export_by_ids.py --file sample_fhir_ids_input.json --token $(gcloud auth application-default print-access-token) --gcs_bucket nimbus-pfb-test
+```
+
+### Running a query on dbGaP FHIR Server
+_The dbGaP FHIR Server is not under access control, so no credentials are needed_.
+
+```
+%> python3 fhir_pfb_export.py --fhir_server https://dbgap-api.ncbi.nlm.nih.gov/fhir/x1 --query "Observation?code=triglycerides_1" --gcs_bucket nimbus-pfb-test
+```
+
+### Running a query on NCPI DEV FHIR Server
+_See the instructions below to Setup Access with the NCPI FHIR Server_
+
+```
+%> python3 fhir_pfb_export.py --fhir_server https://ncpi-api-fhir-service-dev.kidsfirstdrc.org --query "Condition?code:text=Pulmonary%20stenosis&_format=json" --gcs_bucket nimbus-pfb-test --cookies '{ "AWSELBAuthSessionCookie-0": "YOURCOOKIE"}'
+```
+
+### Using a list of patient URIs on NCPI DEV FHIR Server
+_See the instructions below to Setup Access with the NCPI FHIR Server_
+
+```
+%> python3 fhir_pfb_export_by_ids.py --file sample_fhir_ids_input_kf.json --gcs_bucket nimbus-pfb-test --cookies '{ "AWSELBAuthSessionCookie-0": "YOURCOOKIE"}'
 ```
 
 ## Make a new PFB Schema
@@ -179,4 +193,4 @@ You need to:
 
 ## Setup Access with the NCPI FHIR Server
 
-Here are specific instructions for accessing the [NCPI FHIR Server](https://github.com/ncpi-fhir/ncpi-api-fhir-service).
+Here are specific instructions for accessing the [NCPI FHIR Server](https://github.com/ncpi-fhir/ncpi-api-fhir-service). You will need to save the cookie from the FHIR server in order to use the FHIR to PFB script.
