@@ -31,8 +31,10 @@ def main():
 	fhir_server = json_obj['fhir_server_base_uri']
 	token = args.token
 	cloud_bucket = args.gcs_bucket
+	cookies = {}
+	if (args.cookies != ''):
+		cookies = json.loads(args.cookies)
 
-	cookies = dict()
 	headers = {}
 	if (token is not None and token != ''):
 		headers = {"Authorization": "Bearer " + token}
@@ -172,6 +174,7 @@ def parse_args():
 	parser = argparse.ArgumentParser(description='Export PFB from FHIR.')
 	parser.add_argument('--file', type=argparse.FileType('r'), required=True, help='JSON file of FHIR IDs')
 	parser.add_argument('--token', type=str, help='token')
+	parser.add_argument('--cookies', type=str, help='cookies, in JSON format')	
 	parser.add_argument('--gcs_bucket', type=str, required=True, help='gcs_bucket')
 	
 	args = parser.parse_args()
