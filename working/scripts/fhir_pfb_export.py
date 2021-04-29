@@ -2,6 +2,7 @@
 # the matching patient results, and generates a PFB for the patients.
 
 import argparse
+import datetime
 import requests
 import sys
 import json
@@ -12,6 +13,7 @@ from flatten_json import flatten
 # Globals
 patient_keys = dict()
 docref_keys = dict()
+timestr = datetime.datetime.now(datetime.timezone.utc).strftime("%Y%m%d%H%M%S")
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
@@ -37,7 +39,6 @@ def main():
 
 	# Perform a search based on conditions
 	# TODO: we need to make this more generic, remove hard-coded limit
-#	json_obj = get_response_json_object(fhir_server + '/Condition?_count=25&code:text=' + query, headers)
 	json_obj = get_response_json_object(fhir_server + '/' + query, headers, cookies)
 	# Collect all the patient records
 	# eliminate duplicates
@@ -117,7 +118,7 @@ def main():
 	json_schema = json.load(open('minimal_file.json', 'r'))
 	extend_patient_schema(json_schema)
 	extend_docref_schema(json_schema)
-	write_json_schema_to_pfb(json_schema, 'minimal_schema.avro')
+	write_json_schema_to_pfb(json_schema, 'minimal_schema.' + timestr + '.avro')
 
 	# write out the FHIR patient data as PFB
 	write_fhir_patients_to_pfb()
@@ -156,21 +157,21 @@ def write_json_schema_to_pfb(json_schema, output_avro_file):
 	f.write(json.dumps(json_schema))
 	f.close()
 	subprocess.check_call([
-		'pfb', 'from', '-o', 'minimal_schema.avro', 'dict', 'extended_minimal_file.json'
+		'pfb', 'from', '-o', output_avro_file, 'dict', 'extended_minimal_file.json'
 	])
 
 def write_fhir_patients_to_pfb():
 	subprocess.check_call([
-		'pfb', 'from', '-o', 'minimal_data.avro', 'json', '-s', 'minimal_schema.avro', '--program', 'DEV', '--project', 'test', 'input_json/'
+		'pfb', 'from', '-o', 'minimal_data.' + timestr + '.avro', 'json', '-s', 'minimal_schema.' + timestr + '.avro', '--program', 'DEV', '--project', 'test', 'input_json/'
 	])
 
 
 def upload_pfb_to_google_cloud(cloud_bucket):
 	subprocess.check_call([
-		'gsutil', 'cp','minimal_data.avro', 'gs://' + cloud_bucket
+		'gsutil', 'cp','minimal_data.' + timestr + '.avro', 'gs://' + cloud_bucket
 	])
 	print ("Cloud Copy complete.")
-	print ("To import into Terra, use https://app.terra.bio/#import-data?format=PFB&url=https://storage.googleapis.com/" + cloud_bucket + "/minimal_data.avro")
+	print ("To import into Terra, use https://app.terra.bio/#import-data?format=PFB&url=https://storage.googleapis.com/" + cloud_bucket + '/minimal_data.' + timestr + '.avro')
 
 def convert_values_to_strings(json_struct):
 	for curr_key in json_struct.keys():
