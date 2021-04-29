@@ -1,0 +1,6 @@
+{  "fhir_server_base_uri":"https://ncpi-api-fhir-service-dev.kidsfirstdrc.org",
+   "ids":[
+      "Patient/539379",
+      "Patient/539363"
+   ]
+}
