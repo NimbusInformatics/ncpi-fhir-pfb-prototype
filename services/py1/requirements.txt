@@ -1,3 +1,4 @@
 Flask==1.0.0
 pypfb[gen3]
 flatten_json
+pandas
